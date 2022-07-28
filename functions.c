@@ -3,27 +3,48 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <dlfcn.h>
+#include <assert.h>
+#include <unistd.h>
+#include "gas_cam.h"
+#include "functions.h"
 
 #define N 20
 #define P_LENGTH 100
 
-List* init(){
-    List* list=createList();
+//global variables
+void* libHandle;
+gazapi_t *p_gaz;//gas library functions object
+void* handle;//gas library stages object
 
-    insert(list,"func1",func1_cli,func1,"func1 does nothing function: func1 <int> <int>");
-    insert(list,"func2",func2_cli,func2,"func2 does nothing function");
-    insert(list,"func3",func3_cli,func3,"func3 does nothing function");
-    insert(list,"func4",func4_cli,func4,"func4 does nothing function");
-    insert(list,"func5",func5_cli,func5,"func5 does nothing function");
-}
 List* createList(){
     List* list=(List*)malloc(sizeof(List));
-
+    if(list==NULL){
+        printf("error mallocing\n");
+        exit(0);
+    }
     list->head=list->tail=NULL;
     return list;
 }
+void init(List* list){
+
+    libHandle= dlopen("/home/tammar/Desktop/git/build-gas_cam-Desktop-Debug/libgas_cam.so.1.0.0",RTLD_LAZY);
+    assert(libHandle);
+    p_gaz = (gazapi_t*)dlsym(libHandle,"p_gaz_api");
+    insert(list,"func1",func1_cli,func1,"func1 does nothing \n function: func1 <int> <int>");
+    insert(list,"func2",func2_cli,func2,"func2 does nothing function");
+    insert(list,"func3",func3_cli,func3,"func3 does nothing function");
+    insert(list,"start_record",start_record_cli,p_gaz->start_record,"start_record start recording degrees snapshots \n function: start_record");
+    insert(list,"stop_record",stop_record_cli,p_gaz->stop_record,"stop_record stop recording degrees snapshots \n function: stop_record");
+
+}
 void insert(List*list, char*name,genericFunc_cli func_cli,genericFunc func,char* help){
     Func* n=(Func*)malloc(sizeof(Func));
+    if(n==NULL)
+    {   printf("error mallocing\n");
+        exit(0);
+    }
     n->func_cli=func_cli;
     n->func=func;
     n->help=strdup(help);
@@ -37,49 +58,20 @@ void insert(List*list, char*name,genericFunc_cli func_cli,genericFunc func,char*
     list->tail->next=n;
     list->tail=n;
 }
-void getCommandAndActive(){
-
-    List*list=init();
-    char cmd[N+P_LENGTH+1];
-    char **params;
-    gets(cmd);
-    Func* function;
-
-
-    while(strcmp(cmd,"end")){
-    params=(char **)calloc(N,sizeof(char*));
-    int n=getParams(cmd,params);
-
-
-    if(!(function=getFunc(list,params[0]))){
-        printf("no such a command\n");
+void freeList(List*list){
+    Func* f;
+    while(list->head!=NULL){
+        f=list->head;
+        list->head=list->head->next;
+        free(f->help);
+        free(f->name);
+        free(f);
     }
-    else{
-        if(params[1]&&!strcmp(params[1],"-help"))
-         {
-            puts(function->help);
-        }
-        else{
-            funcs_params funcs;
-    int ans=function->func_cli(n-1,params+1,&funcs);
-    if(!ans){
-        printf("faild, help:");
-        puts(function->help);
-    }
-    else{
-        function->func(&funcs);
-    }
-   }
-}
-        free(params);
-        gets(cmd);
-
-    }
+    free(list);
 }
 int getParams(char* cmd, char** params){
-    int len=N;
-    int i=0;
 
+    int len=N, i=0;
     char* token;
     token=strtok(cmd," ");
     while(token!=NULL){
@@ -89,6 +81,10 @@ int getParams(char* cmd, char** params){
         }
         if(i==len){
             params=(char**)realloc(params,len*1.5);
+            if(params==NULL){
+                printf("error mallocing\n");
+                exit(0);
+            }
             len*=1.5;
         }
         params[i++]=strdup(token);
@@ -96,29 +92,93 @@ int getParams(char* cmd, char** params){
     }
     return i;
 }
-Func* getFunc(List*list,char*name){
+Func* getFunc(List* list,char* name){
+
+    if(name==NULL)
+        return NULL;
     Func* ptr=list->head;
+
     while(ptr!=NULL){
-        if(!strcmp(ptr->name,name))
+
+        char* tmp=ptr->name;
+        if(!strcmp(tmp,name))
             return ptr;
+
         ptr=ptr->next;
     }
     return NULL;
 }
+void getCommandAndActive(){
+
+    List* list=createList();
+    init(list);
+
+    char cmd[N+P_LENGTH+1], **params;
+    Func* function;
+    int n=-1;
+    gets(cmd);
+
+    while(strcmp(cmd,"end")){
+        params=(char **)calloc(N,sizeof(char*));
+        if(params==NULL){
+            printf("error mallocing\n");
+            exit(0);
+        }
+        n=getParams(cmd,params);
+        if(!(function=getFunc(list,params[0]))){
+            printf("no such a command\n");
+        }
+        else{
+            if(params[1]&&!strcmp(params[1],"-help"))
+            {
+                puts(function->help);
+            }
+            else{
+                funcs_params funcs;
+                int ans=function->func_cli(n-1,params+1,&funcs);
+                if(!ans){
+                    printf("faild, help:");
+                    puts(function->help);
+                }
+                else{
+                    function->func(&funcs);
+                }
+            }
+        }
+        for(int i=0;i<n;i++)
+            free(params[i]);
+        free(params);
+        gets(cmd);
+    }
+    freeList(list);
+}
+
+
 void func1(funcs_params* funcs){
-printf("int func1 x=%d, y=%d \n", funcs->func1.x,funcs->func1.y);
+    printf("int func1 x=%d, y=%d \n", funcs->func1.x,funcs->func1.y);
 }
 void func2(funcs_params* funcs){
-      printf("func2\n");
+    printf("func2\n");
 }
 void func3(funcs_params* funcs){
-      printf("func3\n");
+    printf("func3\n");
 }
-void func4(funcs_params* funcs){
-      printf("func4\n");
+
+int start_record_cli(int n,char** params,funcs_params* funcs){
+    if(n!=0){
+        printf("error not fiten number of arguments\n");
+        return 0;
+    }
+    handle=p_gaz->init();
+    return 1;
 }
-void func5(funcs_params* funcs){
-      printf("func5\n");
+int stop_record_cli(int n,char** params,funcs_params* funcs){
+    if(n!=0){
+        printf("error not fiten number of arguments\n");
+        return 0;
+    }
+    p_gaz->free_all(handle);
+    return 1;
 }
 int func1_cli(int n,char** params,funcs_params* funcs){
     if(n!=2){
@@ -127,9 +187,9 @@ int func1_cli(int n,char** params,funcs_params* funcs){
     }
     int x=0, y=0;
     if(isInt(params[0]))
-    x=atoi(params[0]);
+        x=atoi(params[0]);
     else
-       { printf("unexpected type\n");
+    { printf("unexpected type\n");
         return 0;}
     if(isInt(params[1]))
         y=atoi(params[1]);
@@ -140,16 +200,15 @@ int func1_cli(int n,char** params,funcs_params* funcs){
     }
 
     func1_params p={
-    .x=x,
-    .y=y};//fitten srtuct
+        .x=x,
+        .y=y};//fitten srtuct
     funcs->func1=p;
 
     return 1;
 }
-int func2_cli(int n,char**,funcs_params*){printf("in func2_cli\n");}
-int func3_cli(int n,char**,funcs_params*){printf("in func3_cli\n");}
-int func4_cli(int n,char**,funcs_params*){printf("in func4_cli\n");}
-int func5_cli(int n,char**,funcs_params*){printf("in func5_cli\n");}
+int func2_cli(int n,char** params,funcs_params* funcs){printf("in func2_cli\n");}
+int func3_cli(int n,char** params,funcs_params* funcs){printf("in func3_cli\n");}
+
 int isInt(char* params){
     for(int i=0;i<strlen(params);i++){
         if(!isdigit(params[i]))
