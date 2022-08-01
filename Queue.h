@@ -1,22 +1,24 @@
 #ifndef QUEUE_H
 #define QUEUE_H
-
+#define MAX_MESSAGES 10
 #include  <semaphore.h>
 typedef struct node{
     void* data;
     struct node* next;
-    }Node;
+}Node;
 
 typedef struct queue{
-    sem_t sem;
-    int size;
-    int capacity;
+    sem_t mutex;
+    sem_t is_full_mutex;
+    unsigned int size;
+    unsigned int capacity;
     struct node* head;
     struct node* tail;
-    }Queue;
+}Queue;
 
 Node * createNode(void * data, int);
 Queue* createQueue(int capacity);
+void initQueue(Queue*,int capacity);
 void freeNode(Node* node);
 void freeQueue(Queue* q);
 int getCapacity(Queue* q);

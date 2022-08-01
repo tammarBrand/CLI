@@ -1,8 +1,9 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
-//#include "HashTable.h"
+#include "gas_cam.h"
 #include <math.h>
 #define LENGTH 5
+
 typedef struct func1_params
 {
     int x;

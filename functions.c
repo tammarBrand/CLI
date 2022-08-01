@@ -7,16 +7,19 @@
 #include <dlfcn.h>
 #include <assert.h>
 #include <unistd.h>
-#include "gas_cam.h"
 #include "functions.h"
+#include <signal.h>
 
 #define N 20
 #define P_LENGTH 100
+
+
 
 //global variables
 void* libHandle;
 gazapi_t *p_gaz;//gas library functions object
 void* handle;//gas library stages object
+
 
 List* createList(){
     List* list=(List*)malloc(sizeof(List));
@@ -27,6 +30,18 @@ List* createList(){
     list->head=list->tail=NULL;
     return list;
 }
+/*
+void handle_sigint(int signal){
+    printf("--going to stop--\n");
+    sleep(1);
+    handler* my_handler=(handler*)handle;
+    if(my_handler->is_record_on)
+        p_gaz->stop_record((void*)my_handler);
+
+
+}
+*/
+
 void init(List* list){
 
     libHandle= dlopen("/home/tammar/Desktop/git/build-gas_cam-Desktop-Debug/libgas_cam.so.1.0.0",RTLD_LAZY);
@@ -38,6 +53,8 @@ void init(List* list){
     insert(list,"start_record",start_record_cli,p_gaz->start_record,"start_record start recording degrees snapshots \n function: start_record");
     insert(list,"stop_record",stop_record_cli,p_gaz->stop_record,"stop_record stop recording degrees snapshots \n function: stop_record");
 
+  /*  if(signal(SIGINT, handle_sigint)==SIG_ERR)
+        printf("error\n");*/
 }
 void insert(List*list, char*name,genericFunc_cli func_cli,genericFunc func,char* help){
     Func* n=(Func*)malloc(sizeof(Func));
@@ -110,12 +127,14 @@ Func* getFunc(List* list,char* name){
 }
 void getCommandAndActive(){
 
-    List* list=createList();
-    init(list);
-
     char cmd[N+P_LENGTH+1], **params;
     Func* function;
     int n=-1;
+
+    List* list=createList();
+    init(list);
+
+
     gets(cmd);
 
     while(strcmp(cmd,"end")){
@@ -151,6 +170,7 @@ void getCommandAndActive(){
         gets(cmd);
     }
     freeList(list);
+
 }
 
 

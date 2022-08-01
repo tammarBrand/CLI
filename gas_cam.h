@@ -2,30 +2,36 @@
 #define GAS_CAM_H
 #define STAGES_NUMBER 5
 #define CAPACITY 10
-#define SNAPSHOT_HEIGHT 20
-#define SNAPSHOT_WIDTH 20
+#define SNAPSHOT_HEIGHT 240
+#define SNAPSHOT_WIDTH 360
 #define MAX_TEMP 30
 #include "Queue.h"
-#include "gas_cam_global.h"
 #include <pthread.h>
 #include <stdbool.h>
-
+#include <stdlib.h>
+#include <stdio.h>
 #ifdef __cplusplus
+
 extern "C" {
 #endif
-
-double rgb_arr[MAX_TEMP][3]={
-    {100,150,200},    {102,60,30},    {80,9,255},
-    {80,9,255},    {80,9,255},    {100,150,200},
-    {102,60,30},    {80,9,255},    {80,9,255},
-    {80,9,255},    {100,150,200},    {102,60,30},
-    {80,9,255},    {80,9,255},    {80,9,255},
-    {100,150,200},    {102,60,30},    {80,9,255},
-    {80,9,255},    {80,9,255},    {100,150,200},
-    {102,60,30},    {80,9,255},    {80,9,255},
-    {80,9,255},    {100,150,200},    {102,60,30},
-    {80,9,255},    {80,9,255},    {80,9,255}
+typedef struct yuv{
+    char y[SNAPSHOT_HEIGHT*SNAPSHOT_WIDTH];
+    char u[SNAPSHOT_HEIGHT*SNAPSHOT_WIDTH/4];
+    char v[SNAPSHOT_HEIGHT*SNAPSHOT_WIDTH/4];
+}YUV;
+/*char rgb_arr[MAX_TEMP][60]={
+    "255 000 087\n",    "000 090 000\n" ,"255 087 000\n"
+    ,"255 000 098\n" ,"255 100 056\n" , "255 000 200\n"
+    "255 000 000\n",    "210 000 255\n",    "080 009 255\n",
+    "255 111 111\n" ,"255 000 212\n" ,"255 111 000\n"
+    ,"255 056 000\n" ,"255 000 111\n" , "010 000 000\n"
+    "122 233 000\n",    "177 000 255\n",    "080 090 255\n",
+    "000 255 000\n" ,"255 000 111\n" ,"255 000 222\n"
+    ,"255 000 000\n" ,"255 000 222\n" ,"255 000 121\n"
+    ,"100 000 255\n" ,"255 000 121\n" ,"255 200 230\n"
+     ,"060 200 200\n" ,"255 200 056\n" ,"255 000 088\n"
 };
+*/
 typedef struct stage{
 
     void* (*func)(void*);
@@ -36,7 +42,12 @@ typedef struct stage{
 }stage;
 
 typedef struct handler{
+    char * static_mat_rgb[MAX_TEMP*3];
     stage stages[STAGES_NUMBER];
+    bool is_snapshot_on;
+    bool is_record_on;
+    FILE *  fp;
+
 }handler;
 
 typedef struct streaming_t{
@@ -48,7 +59,7 @@ typedef struct snapshot_t{
     char* file_name;  //full path ?
     int width;
     int height;
-    int type;  //GPEG,PNG
+    int type;  //GPEG,PNG,ppm
 }snapshot_t;
 
 typedef struct gpio_t{
@@ -66,7 +77,13 @@ typedef struct record_t{
     int height;
     int fps;
 }record_t;
-
+typedef struct ppm_image{
+    int width;
+    int height;
+    char *data;
+    size_t size;
+    char * name;
+} ppm_image;
 typedef struct {
     void* (*init)();
     void (*free_all)(void* handle);
@@ -74,7 +91,7 @@ typedef struct {
     int (*stop_record)(void* handler);
     int (*start_streaming)(streaming_t*,char * file_name);
     int (*stop_streamig)(streaming_t*);
-    int (*do_snapshot)(snapshot_t*);
+    int (*do_snapshot)(void*);
     char* (*get_dll_version)();
     char* (*get_video_statics)(record_t*);
     char* (*get_status)();
