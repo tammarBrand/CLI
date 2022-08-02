@@ -135,7 +135,7 @@ void getCommandAndActive(){
     init(list);
 
 
-    gets(cmd);
+   gets(cmd);
 
     while(strcmp(cmd,"end")){
         params=(char **)calloc(N,sizeof(char*));
@@ -167,7 +167,7 @@ void getCommandAndActive(){
         for(int i=0;i<n;i++)
             free(params[i]);
         free(params);
-        gets(cmd);
+        //gets(cmd);
     }
     freeList(list);
 
