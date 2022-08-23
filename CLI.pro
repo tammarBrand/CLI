@@ -8,12 +8,10 @@ CONFIG -= app_bundle
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-        ../../gas_cam/GAS/Queu.c \
-        ../gas_cam/Queu.c \
-        HashTable.c \
-        functions.c \
         main.c \
-        main.cpp
+        srcs/cli.c \
+        srcs/controller.c \
+        srcs/gas_cam_cli.c
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -21,11 +19,19 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    ../gas_cam/Queue.h \
-    HashTable.h \
-    Queue.h \
-    functions.h \
-    gas_cam.h
+    headers/Queue.h \
+    headers/capture.h \
+    headers/cli.h \
+    headers/controller.h \
+    headers/encode.h \
+    headers/functions_tools.h \
+    headers/gas_cam_cli.h \
+    headers/gas_cammera.h \
+    headers/rgb_converter.h \
+    headers/save_snapshot.h \
+    headers/stage_lib.h \
+    headers/write_record.h \
+    headers/yuv_converter.h
 
 DISTFILES += \
-    CommandLineAPI.pro.user
+    CLI.pro.user
